@@ -1,7 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:web_project/screens/Login_page.dart';
-import 'package:web_project/screens/signup_page.dart';
+import 'package:web_project/Authentication/Login_page.dart';
+import 'package:web_project/Authentication/signup_page.dart';
 
 class AuthLandingPage extends StatefulWidget {
   const AuthLandingPage({Key? key}) : super(key: key);
