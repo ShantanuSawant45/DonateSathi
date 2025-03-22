@@ -1,6 +1,8 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 
+import '../Authentication/auth_logic.dart';
+
 class LoginPage extends StatefulWidget {
   const LoginPage({Key? key}) : super(key: key);
 
@@ -12,7 +14,8 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
   late AnimationController _particleController;
   late AnimationController _formController;
   late AnimationController _buttonController;
-
+  // making a object of authlogic class
+  Appwrite_Auth authService = Appwrite_Auth();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
@@ -22,7 +25,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-
+    authService.Intialize();
     _particleController = AnimationController(
       duration: const Duration(seconds: 10),
       vsync: this,
@@ -204,8 +207,8 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                         onPressed: () {
                           // Handle login logic here
                           if (_emailController.text.isNotEmpty && _passwordController.text.isNotEmpty) {
-                            // Proceed with login
-                          } else {
+                            authService.login(_emailController.text.trim(), _passwordController.text.trim(), context);
+                            } else {
                             // Show error
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(

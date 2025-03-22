@@ -1,6 +1,8 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 
+import '../Authentication/auth_logic.dart';
+
 class SignUpPage extends StatefulWidget {
   const SignUpPage({Key? key}) : super(key: key);
 
@@ -21,11 +23,13 @@ class _SignUpPageState extends State<SignUpPage> with TickerProviderStateMixin {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _acceptTerms = false;
+  Appwrite_Auth authService = Appwrite_Auth();
+
 
   @override
   void initState() {
     super.initState();
-
+    authService.Intialize();
     _particleController = AnimationController(
       duration: const Duration(seconds: 10),
       vsync: this,
@@ -191,9 +195,8 @@ class _SignUpPageState extends State<SignUpPage> with TickerProviderStateMixin {
                       )),
                       child: ElevatedButton(
                         onPressed: () {
-                          // Handle sign up logic
                           if (_acceptTerms) {
-                            // Proceed with sign up
+                            authService.signup(_emailController.text.trim(), _passwordController.text.trim(), context);
                           } else {
                             // Show error message
                             ScaffoldMessenger.of(context).showSnackBar(
