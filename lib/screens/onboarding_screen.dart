@@ -1,37 +1,54 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:web_project/screens/landing_page.dart';
 
-import 'landing_page.dart';
+import 'home_page.dart';
 
 class OnboardingScreen extends StatefulWidget {
-  const OnboardingScreen({Key? key}) : super(key: key);
+  const OnboardingScreen({super.key});
 
   @override
-  _OnboardingScreenState createState() => _OnboardingScreenState();
+  State<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen> with TickerProviderStateMixin {
+class _OnboardingScreenState extends State<OnboardingScreen>
+    with TickerProviderStateMixin {
   final PageController _pageController = PageController();
+  late AnimationController _backgroundController;
+  late AnimationController _contentController;
   int _currentPage = 0;
-  late AnimationController _particleController;
-  late List<AnimationController> _iconControllers;
-  late List<AnimationController> _textControllers;
+  bool _isLastPage = false;
+  List<Color> _backgroundColors = [
+    const Color(0xFFE8F5E9),
+    const Color(0xFFE0F7FA),
+    const Color(0xFFF1F8E9),
+  ];
 
-  final List<OnboardingPage> _pages = [
-    OnboardingPage(
-      icon: Icons.volunteer_activism,
-      title: 'Donate Easily',
-      description: 'Make a difference with just a few taps. Support causes you care about anytime, anywhere.',
+  final List<OnboardingContent> _contents = [
+    OnboardingContent(
+      title: "Share with Purpose",
+      subtitle: "Give Back, Move Forward",
+      description:
+          "Transform lives by sharing what you no longer need. Your unused items can become someone's essential resources.",
+      icon: Icons.favorite_border_rounded,
+      illustrationAsset: "", // You'll provide this later
     ),
-    OnboardingPage(
-      icon: Icons.track_changes,
-      title: 'Track Your Impact',
-      description: 'See exactly how your donations are making a difference with real-time impact tracking.',
+    OnboardingContent(
+      title: "Connect & Contribute",
+      subtitle: "Be the Bridge",
+      description:
+          "Bridge the gap between donors and those in need. Make a direct impact in your community.",
+      icon: Icons.handshake_outlined,
+      illustrationAsset: "", // You'll provide this later
     ),
-    OnboardingPage(
-      icon: Icons.people_alt_rounded,
-      title: 'Join the Community',
-      description: 'Connect with like-minded people and amplify your impact through collaborative giving.',
+    OnboardingContent(
+      title: "Track Your Impact",
+      subtitle: "See the Difference",
+      description:
+          "See how your donations make a difference. Every contribution counts towards building a better tomorrow.",
+      icon: Icons.track_changes_outlined,
+      illustrationAsset: "", // You'll provide this later
     ),
   ];
 
@@ -39,146 +56,184 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
   void initState() {
     super.initState();
 
-    _particleController = AnimationController(
-      duration: const Duration(seconds: 10),
+    _backgroundController = AnimationController(
       vsync: this,
-    )..repeat();
-
-    _iconControllers = List.generate(
-      _pages.length,
-          (index) => AnimationController(
-        duration: const Duration(seconds: 2),
-        vsync: this,
-      )..repeat(reverse: true),
+      duration: const Duration(milliseconds: 500),
     );
 
-    _textControllers = List.generate(
-      _pages.length,
-          (index) => AnimationController(
-        duration: const Duration(milliseconds: 1500),
-        vsync: this,
-      )..forward(),
+    _contentController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    )..forward();
+
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark,
+      ),
     );
   }
 
   @override
   void dispose() {
     _pageController.dispose();
-    _particleController.dispose();
-    for (var controller in _iconControllers) {
-      controller.dispose();
-    }
-    for (var controller in _textControllers) {
-      controller.dispose();
-    }
+    _backgroundController.dispose();
+    _contentController.dispose();
     super.dispose();
-  }
-
-  void _onPageChanged(int page) {
-    setState(() {
-      _currentPage = page;
-    });
-
-    // Reset and start animations for the new page
-    _textControllers[page].reset();
-    _textControllers[page].forward();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFF121212), // Dark background
-      body: Stack(
-        children: [
-          // Animated background particles
-          CustomPaint(
-            painter: ParticlePainter(_particleController),
-            child: Container(),
-          ),
-
-          // Main content
-          Column(
+      body: AnimatedContainer(
+        duration: const Duration(milliseconds: 500),
+        color: _backgroundColors[_currentPage],
+        child: SafeArea(
+          child: Column(
             children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 20.0, vertical: 16.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pushReplacement(
+                          context,
+                          PageRouteBuilder(
+                            pageBuilder: (_, __, ___) =>
+                                const AuthLandingPage(),
+                            transitionDuration:
+                                const Duration(milliseconds: 800),
+                            transitionsBuilder: (_, animation, __, child) {
+                              return FadeTransition(
+                                  opacity: animation, child: child);
+                            },
+                          ),
+                        );
+                      },
+                      child: Text(
+                        "Skip",
+                        style: TextStyle(
+                          color: Colors.grey[700],
+                          fontSize: 16,
+                          fontFamily: 'Poppins',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               Expanded(
-                flex: 4,
+                flex: 10,
                 child: PageView.builder(
                   controller: _pageController,
-                  onPageChanged: _onPageChanged,
-                  itemCount: _pages.length,
+                  onPageChanged: (index) {
+                    setState(() {
+                      // Reset animation controllers
+                      _contentController.reset();
+                      _contentController.forward();
+
+                      _isLastPage = index == _contents.length - 1;
+                      _currentPage = index;
+                    });
+                  },
+                  itemCount: _contents.length,
                   itemBuilder: (context, index) {
-                    return _buildPage(index);
+                    return OnboardingPage(
+                      content: _contents[index],
+                      contentController: _contentController,
+                    );
                   },
                 ),
               ),
-
-              // Page indicator and buttons
               Expanded(
-                flex: 1,
-                child: Container(
+                flex: 2,
+                child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24.0),
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       // Page indicators
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: List.generate(
-                          _pages.length,
-                              (index) => _buildPageIndicator(index),
+                          _contents.length,
+                          (index) => AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            margin: const EdgeInsets.only(right: 8),
+                            height: 8,
+                            width: _currentPage == index ? 32 : 8,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              color: _currentPage == index
+                                  ? const Color(0xFF2E7D32)
+                                  : Colors.grey[300],
+                            ),
+                          ),
                         ),
                       ),
-                      SizedBox(height: 40),
-
-                      // Navigation buttons
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          // Skip button
-                          TextButton(
-                            onPressed: () {
-                              // Navigate to main app
-                              Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => AuthLandingPage()));
-                            },
-                            child: Text(
-                              'Skip',
-                              style: TextStyle(
-                                color: Colors.grey[400],
-                                fontSize: 16,
-                              ),
+                      const SizedBox(height: 32),
+                      // Next/Get Started button
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        width: _isLastPage ? 200 : 70,
+                        height: 70,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            if (_isLastPage) {
+                              Navigator.pushReplacement(
+                                context,
+                                PageRouteBuilder(
+                                  pageBuilder: (_, __, ___) =>
+                                      const AuthLandingPage(),
+                                  transitionDuration:
+                                      const Duration(milliseconds: 800),
+                                  transitionsBuilder:
+                                      (_, animation, __, child) {
+                                    return FadeTransition(
+                                        opacity: animation, child: child);
+                                  },
+                                ),
+                              );
+                            } else {
+                              _pageController.nextPage(
+                                duration: const Duration(milliseconds: 600),
+                                curve: Curves.easeInOut,
+                              );
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF2E7D32),
+                            foregroundColor: Colors.white,
+                            elevation: 4,
+                            shadowColor:
+                                const Color(0xFF2E7D32).withOpacity(0.4),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(35),
                             ),
+                            padding: EdgeInsets.zero,
                           ),
-
-                          // Next/Get Started button
-                          ElevatedButton(
-                            onPressed: () {
-                              if (_currentPage == _pages.length - 1) {
-                                // Navigate to main app on last page
-                                Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => AuthLandingPage()));
-                              } else {
-                                // Go to next page
-                                _pageController.nextPage(
-                                  duration: Duration(milliseconds: 300),
-                                  curve: Curves.easeInOut,
-                                );
-                              }
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.purple[400],
-                              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(30),
-                              ),
-                            ),
-                            child: Text(
-                              _currentPage == _pages.length - 1 ? 'Get Started' : 'Next',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
+                          child: _isLastPage
+                              ? const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      "GET STARTED",
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        fontFamily: 'Poppins',
+                                        letterSpacing: 1,
+                                      ),
+                                    ),
+                                    SizedBox(width: 8),
+                                    Icon(Icons.arrow_forward_rounded),
+                                  ],
+                                )
+                              : const Icon(Icons.arrow_forward_rounded,
+                                  size: 28),
+                        ),
                       ),
                     ],
                   ),
@@ -186,129 +241,146 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
               ),
             ],
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPage(int index) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Animated icon
-          AnimatedBuilder(
-            animation: _iconControllers[index],
-            builder: (context, child) {
-              return Transform.scale(
-                scale: 1.0 + 0.1 * _iconControllers[index].value,
-                child: Container(
-                  width: 150,
-                  height: 150,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.purple.withOpacity(0.5),
-                        blurRadius: 20,
-                        spreadRadius: 5,
-                      ),
-                    ],
-                  ),
-                  child: Icon(
-                    _pages[index].icon,
-                    size: 80,
-                    color: Colors.purple[200],
-                  ),
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 60),
-
-          // Animated title
-          FadeTransition(
-            opacity: _textControllers[index],
-            child: SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(0, 0.5),
-                end: Offset.zero,
-              ).animate(CurvedAnimation(
-                parent: _textControllers[index],
-                curve: Curves.easeOutCubic,
-              )),
-              child: Text(
-                _pages[index].title,
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  shadows: [
-                    Shadow(
-                      color: Colors.purple.withOpacity(0.5),
-                      blurRadius: 10,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // Animated description
-          FadeTransition(
-            opacity: _textControllers[index],
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 32.0),
-              child: Text(
-                _pages[index].description,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey[400],
-                  height: 1.5,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPageIndicator(int index) {
-    bool isActive = index == _currentPage;
-    return AnimatedContainer(
-      duration: Duration(milliseconds: 300),
-      margin: EdgeInsets.symmetric(horizontal: 5),
-      height: 8,
-      width: isActive ? 24 : 8,
-      decoration: BoxDecoration(
-        color: isActive ? Colors.purple[400] : Colors.grey[600],
-        borderRadius: BorderRadius.circular(12),
+        ),
       ),
     );
   }
 }
 
-class OnboardingPage {
-  final IconData icon;
+class OnboardingContent {
   final String title;
+  final String subtitle;
   final String description;
+  final IconData icon;
+  final String illustrationAsset;
 
-  OnboardingPage({
-    required this.icon,
+  OnboardingContent({
     required this.title,
+    required this.subtitle,
     required this.description,
+    required this.icon,
+    required this.illustrationAsset,
   });
+}
+
+class OnboardingPage extends StatelessWidget {
+  final OnboardingContent content;
+  final AnimationController contentController;
+
+  const OnboardingPage({
+    Key? key,
+    required this.content,
+    required this.contentController,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24.0),
+      child: FadeTransition(
+        opacity: Tween<double>(begin: 0.0, end: 1.0).animate(
+          CurvedAnimation(
+            parent: contentController,
+            curve: const Interval(0.0, 0.8, curve: Curves.easeOut),
+          ),
+        ),
+        child: SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0.0, 0.2),
+            end: Offset.zero,
+          ).animate(
+            CurvedAnimation(
+              parent: contentController,
+              curve: const Interval(0.0, 0.8, curve: Curves.easeOut),
+            ),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Illustration placeholder
+              Container(
+                width: 300,
+                height: 280,
+                margin: const EdgeInsets.only(top: 20),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.7),
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 15,
+                      spreadRadius: 1,
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Icon(
+                    content.icon,
+                    size: 100,
+                    color: const Color(0xFF2E7D32).withOpacity(0.7),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 40),
+              // Subtitle
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2E7D32).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  content.subtitle.toUpperCase(),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Montserrat',
+                    color: Color(0xFF2E7D32),
+                    letterSpacing: 1,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Title
+              Text(
+                content.title,
+                style: const TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Montserrat',
+                  color: Color(0xFF2E7D32),
+                  height: 1.2,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              // Description
+              Text(
+                content.description,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontFamily: 'Poppins',
+                  color: Colors.grey[700],
+                  height: 1.5,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class ParticlePainter extends CustomPainter {
   final Animation<double> animation;
   final List<Particle> particles;
 
-  ParticlePainter(this.animation) : particles = List.generate(50, (_) => Particle()) {
+  ParticlePainter(this.animation)
+      : particles = List.generate(50, (_) => Particle()) {
     animation.addListener(() {
       for (var particle in particles) {
         particle.update();

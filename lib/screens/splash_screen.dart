@@ -1,47 +1,82 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'landing_page.dart';
 import 'onboarding_screen.dart';
 
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({Key? key}) : super(key: key);
+  const SplashScreen({super.key});
 
   @override
-  _SplashScreenState createState() => _SplashScreenState();
+  State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMixin {
-  late AnimationController _logoController;
-  late AnimationController _textController;
-  late AnimationController _particleController;
+class _SplashScreenState extends State<SplashScreen>
+    with TickerProviderStateMixin {
+  late AnimationController _animationController;
+  late AnimationController _pulseController;
+  late AnimationController _rotateController;
+  late Animation<double> _fadeAnimation;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _pulseAnimation;
+  late Animation<double> _rotateAnimation;
 
   @override
   void initState() {
     super.initState();
-    _logoController = AnimationController(
-      duration: const Duration(seconds: 2),
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark,
+      ),
+    );
+
+    _animationController = AnimationController(
       vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    );
+
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
 
-    _textController = AnimationController(
-      duration: const Duration(milliseconds: 1500),
+    _rotateController = AnimationController(
       vsync: this,
-    )..forward();
-
-    _particleController = AnimationController(
       duration: const Duration(seconds: 10),
-      vsync: this,
     )..repeat();
 
-    Future.delayed(const Duration(seconds: 4), () {
-      Navigator.of(context).pushReplacement(
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
+      ),
+    );
+
+    _scaleAnimation = Tween<double>(begin: 0.6, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: const Interval(0.0, 0.6, curve: Curves.easeOutBack),
+      ),
+    );
+
+    _pulseAnimation =
+        Tween<double>(begin: 1.0, end: 1.1).animate(_pulseController);
+    _rotateAnimation =
+        Tween<double>(begin: 0.0, end: 2 * pi).animate(_rotateController);
+
+    _animationController.forward();
+
+    Future.delayed(const Duration(seconds: 3), () {
+      Navigator.pushReplacement(
+        context,
         PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) => const OnboardingScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          pageBuilder: (_, __, ___) => const OnboardingScreen(),
+          transitionDuration: const Duration(milliseconds: 800),
+          transitionsBuilder: (_, animation, __, child) {
             return FadeTransition(opacity: animation, child: child);
           },
-          transitionDuration: const Duration(milliseconds: 1000),
         ),
       );
     });
@@ -49,104 +84,154 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
 
   @override
   void dispose() {
-    _logoController.dispose();
-    _textController.dispose();
-    _particleController.dispose();
+    _animationController.dispose();
+    _pulseController.dispose();
+    _rotateController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFF121212), // Dark background
-      body: Stack(
-        children: [
-          CustomPaint(
-            painter: ParticlePainter(_particleController),
-            child: Container(),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.white,
+              Colors.green.shade50,
+              Colors.green.shade100,
+            ],
           ),
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                AnimatedBuilder(
-                  animation: _logoController,
-                  builder: (context, child) {
-                    return Transform.scale(
-                      scale: 1.0 + 0.1 * _logoController.value,
-                      child: Container(
-                        width: 120,
-                        height: 120,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.purple.withOpacity(0.5),
-                              blurRadius: 20,
-                              spreadRadius: 5,
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              AnimatedBuilder(
+                animation: Listenable.merge(
+                    [_scaleAnimation, _pulseAnimation, _rotateAnimation]),
+                builder: (context, child) {
+                  return Transform.scale(
+                    scale: _scaleAnimation.value * _pulseAnimation.value,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // Rotating rings
+                        Transform.rotate(
+                          angle: _rotateAnimation.value,
+                          child: Container(
+                            width: 160,
+                            height: 160,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: SweepGradient(
+                                colors: [
+                                  const Color(0xFF2E7D32).withOpacity(0.0),
+                                  const Color(0xFF2E7D32),
+                                  const Color(0xFF2E7D32).withOpacity(0.0),
+                                ],
+                                stops: const [0.0, 0.5, 1.0],
+                              ),
                             ),
-                          ],
+                          ),
                         ),
-                        child: Icon(
-                          Icons.volunteer_activism,
-                          size: 80,
-                          color: Colors.purple[200],
+                        // Inner circle with shadow
+                        Container(
+                          width: 130,
+                          height: 130,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white,
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF2E7D32).withOpacity(0.2),
+                                blurRadius: 15,
+                                spreadRadius: 2,
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 40),
-                FadeTransition(
-                  opacity: _textController,
-                  child: SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(0, 0.5),
-                      end: Offset.zero,
-                    ).animate(CurvedAnimation(
-                      parent: _textController,
-                      curve: Curves.easeOutCubic,
-                    )),
-                    child: Text(
+                        // Logo icon
+                        Container(
+                          width: 100,
+                          height: 100,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                const Color(0xFF2E7D32),
+                                const Color(0xFF388E3C),
+                              ],
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.volunteer_activism,
+                            size: 50,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 40),
+              FadeTransition(
+                opacity: _fadeAnimation,
+                child: Column(
+                  children: [
+                    const Text(
                       'Donate Sathi',
                       style: TextStyle(
-                        fontSize: 40,
+                        fontSize: 38,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        fontFamily: 'Montserrat',
+                        color: Color(0xFF2E7D32),
+                        letterSpacing: 1.2,
                         shadows: [
                           Shadow(
-                            color: Colors.purple.withOpacity(0.5),
-                            blurRadius: 10,
-                            offset: const Offset(0, 5),
+                            color: Colors.black12,
+                            offset: Offset(0, 2),
+                            blurRadius: 4,
                           ),
                         ],
                       ),
                     ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                FadeTransition(
-                  opacity: _textController,
-                  child: Text(
-                    'The Future of Giving',
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: Colors.grey[400],
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.7),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 10,
+                            spreadRadius: 1,
+                          ),
+                        ],
+                      ),
+                      child: const Text(
+                        'Empowering Communities Together',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontFamily: 'Poppins',
+                          color: Color(0xFF424242),
+                          letterSpacing: 0.5,
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
-                const SizedBox(height: 60),
-                SizedBox(
-                  width: 60,
-                  height: 60,
-                  child: CustomPaint(
-                    painter: LoadingIndicatorPainter(_logoController),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -156,7 +241,8 @@ class ParticlePainter extends CustomPainter {
   final Animation<double> animation;
   final List<Particle> particles;
 
-  ParticlePainter(this.animation) : particles = List.generate(50, (_) => Particle()) {
+  ParticlePainter(this.animation)
+      : particles = List.generate(50, (_) => Particle()) {
     animation.addListener(() {
       for (var particle in particles) {
         particle.update();
